@@ -27,6 +27,15 @@ pub fn ln_gamma_approx(z: f64) -> f64 {
         return f64::INFINITY;
     }
 
+    // Positive integers up to 23 go through gamma_approx, whose factorial path is
+    // exact there (22! is the largest factorial representable in f64). This makes
+    // ln_gamma(1) and ln_gamma(2) return exactly 0 instead of about -1e-11, which
+    // matters for callers that subtract two log-gammas of equal argument. The bound
+    // keeps the branch cheap enough to stay on the hot path.
+    if z <= 23.0 && z.fract() == 0.0 {
+        return gamma_approx(z).ln();
+    }
+
     if z < 0.5 {
         return PI.ln() - (PI * z).sin().abs().ln() - ln_gamma_approx(1.0 - z);
     }
@@ -44,7 +53,13 @@ pub fn ln_gamma_approx(z: f64) -> f64 {
 pub fn gamma_approx(z: f64) -> f64 {
     if z <= 0.0 && z.fract() == 0.0 {
         if z == 0.0 {
-            return f64::INFINITY;
+            // tgamma(+0.0) is +inf and tgamma(-0.0) is -inf (C99, and what scipy
+            // returns). Plain `z == 0.0` matches both zeros, so branch on the sign.
+            return if z.is_sign_negative() {
+                f64::NEG_INFINITY
+            } else {
+                f64::INFINITY
+            };
         } else {
             return f64::NAN;
         }
