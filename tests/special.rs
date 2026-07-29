@@ -1,5 +1,5 @@
 use peroxide::fuga::{LambertWAccuracyMode::*, *};
-use std::f64::consts::PI;
+use std::f64::consts::{LN_2, PI};
 
 #[test]
 fn lambert_w_test() {
@@ -13,6 +13,11 @@ fn test_gamma_poles_and_undefined() {
     assert!(gamma(0.0).is_infinite());
     assert!(gamma(0.0).is_sign_positive());
 
+    // Gamma(-0.0) diverges to negative infinity: tgamma(+0.0) is +inf and
+    // tgamma(-0.0) is -inf in C99, and `z == 0.0` matches both zeros.
+    assert!(gamma(-0.0).is_infinite());
+    assert!(gamma(-0.0).is_sign_negative());
+
     // Gamma for negative integers is mathematically undefined (diverges)
     assert!(gamma(-1.0).is_nan());
     assert!(gamma(-2.0).is_nan());
@@ -22,6 +27,8 @@ fn test_gamma_poles_and_undefined() {
     assert!(ln_gamma(0.0).is_infinite());
     assert!(ln_gamma(-1.0).is_infinite());
     assert!(ln_gamma(-10.0).is_infinite());
+    assert!(ln_gamma(-0.0).is_infinite());
+    assert!(ln_gamma(-0.0).is_sign_positive());
 }
 
 #[test]
@@ -103,6 +110,69 @@ fn test_ln_gamma_consistency() {
             val,
             expected,
             actual
+        );
+    }
+}
+
+#[test]
+fn test_ln_gamma_exact_at_small_integers() {
+    // Gamma(1) = Gamma(2) = 1, so the log is exactly zero. The Lanczos series on
+    // its own lands near -5e-12 here, and that leaks into any caller that forms a
+    // difference of log-gammas, such as a log-space binomial coefficient.
+    assert_eq!(ln_gamma(1.0), 0.0);
+    assert_eq!(ln_gamma(2.0), 0.0);
+
+    // Reference values computed with mpmath at 40 digits, rounded to f64. The
+    // tolerance is tight enough to fail if the integer path is removed, since the
+    // Lanczos series alone is only good to about 4e-13 relative here.
+    let cases: [(f64, f64); 3] = [
+        (3.0, LN_2),
+        (16.0, 27.89927138384089),
+        (23.0, 48.47118135183523),
+    ];
+
+    for &(z, expected) in &cases {
+        let got = ln_gamma(z);
+        let rel = (got - expected).abs() / expected.abs();
+        assert!(
+            rel < 1e-14,
+            "ln_gamma({}) = {}, expected {}, relative error {:e}",
+            z,
+            got,
+            expected,
+            rel
+        );
+    }
+}
+
+#[test]
+fn test_ln_gamma_against_reference() {
+    // Independent reference values (mpmath, 40 digits, rounded to f64).
+    // test_ln_gamma_consistency compares ln_gamma against gamma().ln(), which is
+    // circular for non-integer z >= 0.5 because gamma is ln_gamma(z).exp() there,
+    // so these pin the actual values instead. Note nearly_eq compares magnitudes
+    // and cannot catch a sign flip, hence the explicit signed comparison.
+    let cases: [(f64, f64); 8] = [
+        (0.5, 0.5723649429247001),
+        (1.5, -0.12078223763524522),
+        (2.5, 0.2846828704729192),
+        (10.5, 13.940625219403763),
+        (-0.5, 1.2655121234846454),
+        (-1.5, 0.860047015376481),
+        (-2.5, -0.056243716497674054),
+        (-10.5, -15.147270590717842),
+    ];
+
+    for &(z, expected) in &cases {
+        let got = ln_gamma(z);
+        let tol = 1e-9 * expected.abs().max(1.0);
+        assert!(
+            (got - expected).abs() <= tol,
+            "ln_gamma({}) = {}, expected {} (tolerance {:e})",
+            z,
+            got,
+            expected,
+            tol
         );
     }
 }
