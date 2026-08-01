@@ -1,3 +1,25 @@
+# Release 0.43.1 (2026-08-02)
+
+## Bug fixes
+
+- Improve numerical stability and domain coverage of `gamma_approx` and `ln_gamma_approx` ([#105](https://github.com/Axect/Peroxide/pull/105)) (Thanks to [@jzeuzs](https://github.com/jzeuzs))
+  - `ln_gamma_approx` now applies Euler's reflection formula for `z < 0.5`, which previously only `gamma_approx` did.
+  - Poles are handled explicitly: `gamma_approx` returns `NaN` at negative integers and `ln_gamma_approx` returns `+inf` at non-positive integers.
+  - The positive-integer fast path accumulates in `f64` instead of the integer `factorial` helper, and saturates to `+inf` above `z = 171`.
+  - Adds 171 lines of tests covering poles, reflection, integer arguments and large-magnitude inputs.
+- Make `ln_gamma` exact at small integers and `gamma(-0.0)` negative infinity ([#113](https://github.com/Axect/Peroxide/pull/113))
+  - Integer arguments up to 23 route through the exact factorial path, so `ln_gamma_approx(1.0)` and `ln_gamma_approx(2.0)` return exactly `0` instead of about `-1e-11`. This matters for callers that subtract two log-gammas of equal argument.
+  - `gamma_approx(-0.0)` returns `-inf` while `gamma_approx(0.0)` returns `+inf`, matching C99 `tgamma` and SciPy.
+
+## JOSS review (#10366) cycle
+
+### Metadata
+- Add Russell R P Senthamarai to `CITATION.cff` and the manuscript author list. The manuscript and `CITATION.cff` now list the same eight named authors in the same order with matching ORCIDs.
+- Use a single SPDX identifier for the `CITATION.cff` `license` field. `MIT OR Apache-2.0` is an SPDX expression, which the Citation File Format 1.2.0 schema does not accept. Zenodo validates the file with cffconvert during GitHub release archiving, so the v0.42.0 and v0.43.0 archives failed and never received a DOI. The array form is valid per the CFF spec but Zenodo has rejected it since the InvenioRDM migration ([zenodo/zenodo#2515](https://github.com/zenodo/zenodo/issues/2515)). The crate stays dual-licensed under MIT or Apache-2.0 through `Cargo.toml` and the two `LICENSE-*` files.
+
+### Documentation
+- Apply editorial wording fixes to the manuscript ([#114](https://github.com/Axect/Peroxide/pull/114)) (Thanks to [@jbytecode](https://github.com/jbytecode))
+
 # Release 0.43.0 (2026-07-11)
 
 ## Breaking changes
