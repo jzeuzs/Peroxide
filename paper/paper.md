@@ -27,6 +27,9 @@ authors:
   - name: Soumya Sen
     orcid: 0009-0008-0337-9964
     affiliation: 4
+  - name: Russell R P Senthamarai
+    orcid: 0000-0002-8061-5480
+    affiliation: 4
   - name: Johanna Sörngård
     orcid: 0000-0002-8660-9989
     affiliation: 4
@@ -77,11 +80,11 @@ Peroxide fills this integration gap.
 | DataFrame I/O       | $\checkmark$        | —       | —       | —    | —        | —      | —        | $\checkmark$      |
 
 We do not claim superiority over any specialist crate within its domain.
-Peroxide's contribution is the integration itself, enabled by design abstractions: a `ButcherTableau` trait unifies Runge-Kutta methods via compile-time constants, a `Calculus` trait supports exact differentiation and integration of piecewise polynomial splines, const-generic typing constrains root-finding dimensions, and a `Real` trait carries AD-derived derivatives into optimization and root-finding without glue code.
+Peroxide's contribution is the integration itself, enabled by design abstractions: a `ButcherTableau` trait unifies Runge-Kutta methods via compile-time constants, a `Calculus` trait supports exact differentiation and integration of piecewise polynomial splines, const generic typing constrains root-finding dimensions, and a `Real` trait carries AD-derived derivatives into optimization and root-finding without glue code.
 
 # State of the field
 
-In automatic differentiation specifically, a review of available Rust AD crates on crates.io indicates that, to our knowledge, Peroxide is the only library combining const-generic derivative order, normalized Taylor coefficient storage, and true Taylor-mode propagation with $O(N^2)$ cost per elementary operation.
+In automatic differentiation specifically, a review of available Rust AD crates on crates.io indicates that, to our knowledge, Peroxide is the only library combining const generic derivative order, normalized Taylor coefficient storage, and true Taylor-mode propagation with $O(N^2)$ cost per elementary operation.
 Most alternatives provide dual numbers up to second or third order with fixed type hierarchies [@numdual] or nested generics with exponential cost at higher orders [@autodiff_elrnv].
 The ad-trait crate [@adtrait] offers both forward and reverse modes but is limited to first-order derivatives.
 Enzyme [@enzyme] performs AD as an LLVM compiler pass and supports both forward and reverse modes.
@@ -95,11 +98,11 @@ Peroxide's `ButcherTableau` trait-based architecture is a complementary approach
 **Architecture.**
 We store matrices as a flat `Vec<f64>` with a `Shape` enum (`Row`/`Col`) that controls logical layout without copying data.
 This design trades the rich type-level dimensionality of nalgebra for a memory model that maps directly to both the pure-Rust `matrixmultiply` crate [@matrixmultiply] and, when the `O3` feature flag is enabled, to OpenBLAS [@openblas], passing raw pointers with stride and transpose flags without intermediate type conversions.
-The trade-offs are that matrix dimensions are not enforced at compile time (unlike nalgebra's typed `Matrix<f64, R, C>`) and the layout does not extend to N-dimensional tensors as `ndarray` [@ndarray] does.
+The trade-offs are that matrix dimensions are not enforced at compile time (unlike nalgebra's typed `Matrix<f64, R, C>`), and the layout does not extend to N-dimensional tensors as `ndarray` [@ndarray] does.
 A `Real` trait abstracts over `f64` and `AD` (= `Jet<2>`), so the same function can compute both values and derivatives.
 
 **Automatic differentiation.**
-The const-generic type `Jet<N>` stores the function value $c_0 = f(a)$ and $N$ normalized Taylor coefficients $c_k = f^{(k)}(a)/k!$ [@griewank2008].
+The const generic type `Jet<N>` stores the function value $c_0 = f(a)$ and $N$ normalized Taylor coefficients $c_k = f^{(k)}(a)/k!$ [@griewank2008].
 Multiplication follows the Cauchy product of truncated power series:
 
 $$c_n(f \cdot g) = \sum_{i=0}^{n} c_i(f)\, c_{n-i}(g)$$
